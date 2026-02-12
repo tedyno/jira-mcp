@@ -18,7 +18,7 @@ func MarkdownToADF(markdown string) *models.CommentNodeScheme {
 	source := []byte(markdown)
 
 	md := goldmark.New(
-		goldmark.WithExtensions(extension.Strikethrough),
+		goldmark.WithExtensions(extension.Strikethrough, extension.Table),
 	)
 	reader := text.NewReader(source)
 	doc := md.Parser().Parse(reader)
@@ -62,6 +62,12 @@ func convertNode(n ast.Node, source []byte) *models.CommentNodeScheme {
 	case ast.KindThematicBreak:
 		return &models.CommentNodeScheme{Type: "rule"}
 	default:
+		// Check GFM extension block nodes
+		switch n.Kind() {
+		case extast.KindTable:
+			return convertTable(n, source)
+		}
+
 		// Fallback: try to render children as a paragraph
 		return convertParagraph(n, source)
 	}
@@ -168,6 +174,57 @@ func convertListItem(n ast.Node, source []byte) *models.CommentNodeScheme {
 		}
 	}
 	return li
+}
+
+func convertTable(n ast.Node, source []byte) *models.CommentNodeScheme {
+	table := &models.CommentNodeScheme{Type: "table"}
+
+	for child := n.FirstChild(); child != nil; child = child.NextSibling() {
+		switch child.Kind() {
+		case extast.KindTableHeader:
+			row := convertTableRow(child, source, "tableHeader")
+			if row != nil {
+				table.Content = append(table.Content, row)
+			}
+		case extast.KindTableRow:
+			row := convertTableRow(child, source, "tableCell")
+			if row != nil {
+				table.Content = append(table.Content, row)
+			}
+		}
+	}
+
+	return table
+}
+
+func convertTableRow(n ast.Node, source []byte, cellType string) *models.CommentNodeScheme {
+	row := &models.CommentNodeScheme{Type: "tableRow"}
+
+	for child := n.FirstChild(); child != nil; child = child.NextSibling() {
+		if child.Kind() == extast.KindTableCell {
+			cell := convertTableCell(child, source, cellType)
+			if cell != nil {
+				row.Content = append(row.Content, cell)
+			}
+		}
+	}
+
+	return row
+}
+
+func convertTableCell(n ast.Node, source []byte, cellType string) *models.CommentNodeScheme {
+	cell := &models.CommentNodeScheme{Type: cellType}
+
+	// Each cell wraps its inline content in a paragraph
+	p := &models.CommentNodeScheme{Type: "paragraph"}
+	p.Content = convertInlineChildren(n, source, nil)
+	if len(p.Content) == 0 {
+		// Empty cell still needs a paragraph
+		p.Content = []*models.CommentNodeScheme{{Type: "text", Text: ""}}
+	}
+	cell.Content = []*models.CommentNodeScheme{p}
+
+	return cell
 }
 
 // convertInlineChildren walks a block node's inline children and produces ADF text/hardBreak nodes.
