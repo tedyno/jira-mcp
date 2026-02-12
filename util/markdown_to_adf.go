@@ -2,10 +2,13 @@ package util
 
 import (
 	"bytes"
+	"strings"
 
 	"github.com/ctreminiom/go-atlassian/pkg/infra/models"
 	"github.com/yuin/goldmark"
 	"github.com/yuin/goldmark/ast"
+	"github.com/yuin/goldmark/extension"
+	extast "github.com/yuin/goldmark/extension/ast"
 	"github.com/yuin/goldmark/text"
 )
 
@@ -14,7 +17,9 @@ import (
 func MarkdownToADF(markdown string) *models.CommentNodeScheme {
 	source := []byte(markdown)
 
-	md := goldmark.New()
+	md := goldmark.New(
+		goldmark.WithExtensions(extension.Strikethrough),
+	)
 	reader := text.NewReader(source)
 	doc := md.Parser().Parse(reader)
 
@@ -233,8 +238,9 @@ func convertInline(n ast.Node, source []byte, parentMarks []*models.MarkScheme) 
 	case ast.KindCodeSpan:
 		var buf bytes.Buffer
 		for child := n.FirstChild(); child != nil; child = child.NextSibling() {
-			seg := child.(*ast.Text).Segment
-			buf.Write(seg.Value(source))
+			if tn, ok := child.(*ast.Text); ok {
+				buf.Write(tn.Segment.Value(source))
+			}
 		}
 		txt := buf.String()
 		if txt == "" {
@@ -267,7 +273,28 @@ func convertInline(n ast.Node, source []byte, parentMarks []*models.MarkScheme) 
 			{Type: "text", Text: url, Marks: marks},
 		}
 
+	case ast.KindImage:
+		img := n.(*ast.Image)
+		href := string(img.Destination)
+		altText := strings.TrimSpace(string(n.Text(source)))
+		if altText == "" {
+			altText = href
+		}
+		mark := &models.MarkScheme{
+			Type:  "link",
+			Attrs: map[string]interface{}{"href": href},
+		}
+		marks := append(copyMarks(parentMarks), mark)
+		return []*models.CommentNodeScheme{
+			{Type: "text", Text: altText, Marks: marks},
+		}
+
 	default:
+		// Check GFM extension nodes
+		if n.Kind() == extast.KindStrikethrough {
+			newMarks := append(copyMarks(parentMarks), &models.MarkScheme{Type: "strike"})
+			return convertInlineChildren(n, source, newMarks)
+		}
 		// Unknown inline — try to render children
 		return convertInlineChildren(n, source, parentMarks)
 	}

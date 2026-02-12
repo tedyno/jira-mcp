@@ -236,6 +236,56 @@ func TestMarkdownToADF_PlainText(t *testing.T) {
 	}
 }
 
+func TestMarkdownToADF_Strikethrough(t *testing.T) {
+	md := "This is ~~deleted~~ text.\n"
+	doc := MarkdownToADF(md)
+
+	p := doc.Content[0]
+	assertNodeType(t, p, "paragraph")
+
+	var foundStrike bool
+	for _, child := range p.Content {
+		for _, mark := range child.Marks {
+			if mark.Type == "strike" {
+				foundStrike = true
+				if child.Text != "deleted" {
+					t.Errorf("strike text = %q, want %q", child.Text, "deleted")
+				}
+			}
+		}
+	}
+	if !foundStrike {
+		t.Error("expected strike mark, not found")
+	}
+}
+
+func TestMarkdownToADF_Image(t *testing.T) {
+	md := "![alt text](https://example.com/image.png)\n"
+	doc := MarkdownToADF(md)
+
+	p := doc.Content[0]
+	assertNodeType(t, p, "paragraph")
+
+	var foundLink bool
+	for _, child := range p.Content {
+		for _, mark := range child.Marks {
+			if mark.Type == "link" {
+				foundLink = true
+				href, _ := mark.Attrs["href"].(string)
+				if href != "https://example.com/image.png" {
+					t.Errorf("image link href = %q, want %q", href, "https://example.com/image.png")
+				}
+				if child.Text != "alt text" {
+					t.Errorf("image link text = %q, want %q", child.Text, "alt text")
+				}
+			}
+		}
+	}
+	if !foundLink {
+		t.Error("expected image to be rendered as link, not found")
+	}
+}
+
 func TestMarkdownToADF_EmptyString(t *testing.T) {
 	doc := MarkdownToADF("")
 	assertNodeType(t, doc, "doc")
