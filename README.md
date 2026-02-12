@@ -1,4 +1,4 @@
-## Jira MCP
+# Jira MCP
 
 An opinionated Jira MCP server built from years of real-world software development experience.
 
@@ -6,13 +6,14 @@ Unlike generic Jira integrations, this MCP is crafted from the daily workflows o
 
 This isn't just another API wrapper. It's a reflection of how professionals actually use Jira: managing sprints, tracking development work, coordinating releases, and maintaining visibility across teams. Every tool is designed to solve real problems that arise in modern software development.
 
-## Available tools
+## Available Tools
 
 ### Issue Management
 - **jira_get_issue** - Retrieve detailed information about a specific issue including status, assignee, description, subtasks, and available transitions
 - **jira_create_issue** - Create a new issue with specified details (returns key, ID, and URL)
 - **jira_create_child_issue** - Create a child issue (sub-task) linked to a parent issue
 - **jira_update_issue** - Modify an existing issue's details (supports partial updates)
+- **jira_delete_issue** - Delete an issue permanently
 - **jira_list_issue_types** - List all available issue types in a project with their IDs, names, and descriptions
 
 ### Search
@@ -49,19 +50,100 @@ This isn't just another API wrapper. It's a reflection of how professionals actu
 ### Development Information
 - **jira_get_development_information** - Retrieve branches, pull requests, and commits linked to an issue via development tool integrations (GitHub, GitLab, Bitbucket)
 
-
+### Attachments
+- **jira_download_attachment** - Download a Jira attachment to a local temporary file
 
 ## Installation
 
-Copy this prompt to your AI assistant:
+### Docker (recommended)
 
-```
-Install the Jira MCP server (https://github.com/nguyenvanduocit/jira-mcp) for my Claude Desktop or Cursor IDE. Read the MCP documentation carefully and guide me through the installation step by step.
+```bash
+docker pull tedyno/jira-mcp:latest
 ```
 
-If your AI assistant cannot help with this installation, it indicates either a misconfiguration or an ineffective AI tool. A capable AI assistant should be able to guide you through MCP installation.
+### Go
+
+```bash
+go install github.com/nguyenvanduocit/jira-mcp@latest
+```
+
+Or build from source:
+
+```bash
+git clone https://github.com/MountainLift/jira-mcp.git
+cd jira-mcp
+go build -o jira-mcp .
+```
+
+## Configuration
+
+Create an API token at [Atlassian API tokens](https://id.atlassian.com/manage-profile/security/api-tokens).
+
+Set the following environment variables:
+
+- **ATLASSIAN_HOST** — your Atlassian instance URL (e.g. `https://your-company.atlassian.net`)
+- **ATLASSIAN_EMAIL** — your Atlassian account email
+- **ATLASSIAN_TOKEN** — API token
+
+Or use a `.env` file:
+
+```bash
+ATLASSIAN_HOST=https://your-company.atlassian.net
+ATLASSIAN_EMAIL=your-email@company.com
+ATLASSIAN_TOKEN=your-api-token
+```
+
+## Usage with Claude Code
+
+### Docker
+
+```json
+{
+  "mcpServers": {
+    "jira": {
+      "command": "docker",
+      "args": ["run", "-i", "--rm", "-e", "ATLASSIAN_HOST", "-e", "ATLASSIAN_EMAIL", "-e", "ATLASSIAN_TOKEN", "tedyno/jira-mcp:latest"],
+      "env": {
+        "ATLASSIAN_HOST": "https://your-company.atlassian.net",
+        "ATLASSIAN_EMAIL": "your-email@company.com",
+        "ATLASSIAN_TOKEN": "your-api-token"
+      }
+    }
+  }
+}
+```
+
+Or via CLI:
+
+```bash
+claude mcp add jira -e ATLASSIAN_HOST=https://your-company.atlassian.net -e ATLASSIAN_EMAIL=your-email@company.com -e ATLASSIAN_TOKEN=your-api-token -- docker run -i --rm -e ATLASSIAN_HOST -e ATLASSIAN_EMAIL -e ATLASSIAN_TOKEN tedyno/jira-mcp:latest
+```
+
+### Binary
+
+```json
+{
+  "mcpServers": {
+    "jira": {
+      "command": "jira-mcp",
+      "env": {
+        "ATLASSIAN_HOST": "https://your-company.atlassian.net",
+        "ATLASSIAN_EMAIL": "your-email@company.com",
+        "ATLASSIAN_TOKEN": "your-api-token"
+      }
+    }
+  }
+}
+```
+
+Or via CLI:
+
+```bash
+claude mcp add jira -e ATLASSIAN_HOST=https://your-company.atlassian.net -e ATLASSIAN_EMAIL=your-email@company.com -e ATLASSIAN_TOKEN=your-api-token -- jira-mcp
+```
 
 ## License
+
 MIT — see `LICENSE`.
 
 ## FOR AI
@@ -86,72 +168,3 @@ Key concepts:
 Before making changes, review:
 - **CLAUDE.md** for architecture patterns and development commands
 - **.specify/memory/constitution.md** for governance principles
-
-
-## Quick start
-
-### 1) Get an API token
-Create one at `https://id.atlassian.com/manage-profile/security/api-tokens`.
-
-### 2) Add to Cursor
-Use Docker or a local binary (STDIO; no ports needed).
-
-#### Docker
-```json
-{
-  "mcpServers": {
-    "jira": {
-      "command": "docker",
-      "args": [
-        "run", "--rm", "-i",
-        "-e", "ATLASSIAN_HOST=https://your-company.atlassian.net",
-        "-e", "ATLASSIAN_EMAIL=your-email@company.com",
-        "-e", "ATLASSIAN_TOKEN=your-api-token",
-        "ghcr.io/nguyenvanduocit/jira-mcp:latest"
-      ]
-    }
-  }
-}
-```
-
-#### Binary
-```json
-{
-  "mcpServers": {
-    "jira": {
-      "command": "/usr/local/bin/jira-mcp",
-      "env": {
-        "ATLASSIAN_HOST": "https://your-company.atlassian.net",
-        "ATLASSIAN_EMAIL": "your-email@company.com",
-        "ATLASSIAN_TOKEN": "your-api-token"
-      }
-    }
-  }
-}
-```
-
-### 3) Try it in Cursor
-- “Show my issues assigned to me”
-- “What’s in the current sprint for ABC?”
-- “Create a bug in ABC: Login fails on Safari”
-
-## Configuration
-- **ATLASSIAN_HOST**: `https://your-company.atlassian.net`
-- **ATLASSIAN_EMAIL**: your Atlassian email
-- **ATLASSIAN_TOKEN**: API token
-
-Optional `.env` (if running locally):
-```bash
-ATLASSIAN_HOST=https://your-company.atlassian.net
-ATLASSIAN_EMAIL=your-email@company.com
-ATLASSIAN_TOKEN=your-api-token
-```
-
-HTTP mode (optional, for debugging):
-```bash
-jira-mcp -env .env -http_port 3000
-```
-Cursor config (HTTP mode):
-```json
-{ "mcpServers": { "jira": { "url": "http://localhost:3000/mcp" } } }
-```

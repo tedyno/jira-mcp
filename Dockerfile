@@ -1,28 +1,15 @@
-FROM golang:1.23-alpine AS builder
+FROM golang:1.25-alpine AS builder
 
 WORKDIR /app
 
 COPY go.mod go.sum ./
-
 RUN go mod download
 
 COPY . .
+RUN CGO_ENABLED=0 go build -o jira-mcp .
 
-# Use build arguments for cross-compilation
-ARG TARGETOS
-ARG TARGETARCH
+FROM alpine:3.21
 
-RUN CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build -o jira-mcp .
+COPY --from=builder /app/jira-mcp /usr/local/bin/jira-mcp
 
-FROM alpine:latest
-
-WORKDIR /app
-
-COPY --from=builder /app/jira-mcp .
-
-# Expose port for SSE server (optional)
-EXPOSE 8080
-
-ENTRYPOINT ["/app/jira-mcp"]
-
-CMD []
+ENTRYPOINT ["jira-mcp"]
