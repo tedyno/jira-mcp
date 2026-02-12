@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.18.0](https://github.com/tedyno/jira-mcp/compare/v1.17.4...v1.18.0) (2026-02-12)
+
+
+### Features
+
+* convert markdown to ADF for issue descriptions and comments ([3981bb8](https://github.com/tedyno/jira-mcp/commit/3981bb85fc285ebe91fc44e2d2d4529c91372d0a))
+
+
+### Bug Fixes
+
+* safe type assertion, strikethrough support, image fallback ([948ee13](https://github.com/tedyno/jira-mcp/commit/948ee13fada67923ee15967bea7ae6b23aaa741c))
+
 ## [1.17.4](https://github.com/nguyenvanduocit/jira-mcp/compare/v1.17.3...v1.17.4) (2026-02-03)
 
 
